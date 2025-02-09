@@ -1,10 +1,13 @@
 ﻿using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Asjc.Collections.Extended
 {
     /// <inheritdoc cref="IOrderedDictionary{TKey, TValue}"/>
     public class OrderedDictionary<TKey, TValue> : IOrderedDictionary<TKey, TValue>, IOrderedDictionary where TKey : notnull
     {
+        // Well, I'm really confused about nullability. Let it be!
+
         private readonly Dictionary<TKey, TValue> dictionary;
         private readonly List<KeyValuePair<TKey, TValue>> list;
 
@@ -46,7 +49,7 @@ namespace Asjc.Collections.Extended
                 if (ContainsKey(key))
                 {
                     dictionary[key] = value;
-                    list[OrderedKeys.IndexOf(key)] = new KeyValuePair<TKey, TValue>(key, value);
+                    list[OrderedKeys.IndexOf(key)] = new(key, value);
                 }
                 else
                 {
@@ -77,22 +80,22 @@ namespace Asjc.Collections.Extended
             }
         }
 
-        object IDictionary.this[object key]
+        object? IDictionary.this[object key]
         {
-            get => ((IDictionary)dictionary)[key];
-            set => this[(TKey)key] = (TValue)value;
+            get => ((IDictionary)dictionary)[key]; // Returns null for incompatible keys.
+            set => this[(TKey)key] = (TValue)value!; // Safe?
         }
 
-        object IList.this[int index]
+        object? IList.this[int index]
         {
             get => this[index];
-            set => this[index] = (KeyValuePair<TKey, TValue>)value;
+            set => this[index] = (KeyValuePair<TKey, TValue>)value!; // Safe?
         }
 
         /// <summary>
         /// Gets an <see cref="ICollection{T}"/> containing the keys in the <see cref="OrderedDictionary{TKey, TValue}"/>.
         /// </summary>
-        public ICollection<TKey> Keys => dictionary.Keys;
+        public Dictionary<TKey, TValue>.KeyCollection Keys => dictionary.Keys;
 
         /// <summary>
         /// Gets an <see cref="List{T}"/> containing the ordered keys in the <see cref="OrderedDictionary{TKey, TValue}"/>.
@@ -105,7 +108,7 @@ namespace Asjc.Collections.Extended
         /// <summary>
         /// Gets an <see cref="ICollection{T}"/> containing the values in the <see cref="OrderedDictionary{TKey, TValue}"/>.
         /// </summary>
-        public ICollection<TValue> Values => dictionary.Values;
+        public Dictionary<TKey, TValue>.ValueCollection Values => dictionary.Values;
 
         /// <summary>
         /// Gets an <see cref="List{T}"/> containing the ordered values in the <see cref="OrderedDictionary{TKey, TValue}"/>.
@@ -120,16 +123,19 @@ namespace Asjc.Collections.Extended
         /// </summary>
         public int Count => list.Count;
 
-        /// <summary>
-        /// Gets a value that indicates whether the dictionary is read-only.
-        /// </summary>
-        public bool IsReadOnly => false;
+        ICollection<TKey> IDictionary<TKey, TValue>.Keys => Keys;
+
+        ICollection<TValue> IDictionary<TKey, TValue>.Values => Values;
+
+        ICollection IDictionary.Keys => Keys;
+
+        ICollection IDictionary.Values => Values;
 
         IList<TKey> IOrderedDictionary<TKey, TValue>.OrderedKeys => OrderedKeys;
 
-        IList IOrderedDictionary.OrderedKeys => OrderedKeys;
-
         IList<TValue> IOrderedDictionary<TKey, TValue>.OrderedValues => OrderedValues;
+
+        IList IOrderedDictionary.OrderedKeys => OrderedKeys;
 
         IList IOrderedDictionary.OrderedValues => OrderedValues;
 
@@ -137,27 +143,29 @@ namespace Asjc.Collections.Extended
 
         bool IList.IsFixedSize => false;
 
-        ICollection IDictionary.Keys => dictionary.Keys;
+        bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly => false;
 
-        ICollection IDictionary.Values => dictionary.Values;
+        bool IDictionary.IsReadOnly => false;
+
+        bool IList.IsReadOnly => false;
 
         bool ICollection.IsSynchronized => false;
 
         object ICollection.SyncRoot => this;
 
         /// <summary>
-        /// Adds the specified key and value to the dictionary.
+        /// Adds the specified key and value to the <see cref="OrderedDictionary{TKey, TValue}"/>.
         /// </summary>
         /// <param name="key">The key of the element to add.</param>
         /// <param name="value">The value of the element to add.</param>
         public void Add(TKey key, TValue value)
         {
             dictionary.Add(key, value); // Throws an exception when the key is duplicated.
-            list.Add(new KeyValuePair<TKey, TValue>(key, value));
+            list.Add(new(key, value));
         }
 
         /// <summary>
-        /// Adds the specified key and value to the dictionary.
+        /// Adds the specified key and value to the <see cref="OrderedDictionary{TKey, TValue}"/>.
         /// </summary>
         /// <param name="item">The element to add.</param>
         public void Add(KeyValuePair<TKey, TValue> item)
@@ -202,7 +210,7 @@ namespace Asjc.Collections.Extended
         /// <returns>
         /// A <see cref="List{T}.Enumerator"/> for the <see cref="OrderedDictionary{TKey, TValue}"/>.
         /// </returns>
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => list.GetEnumerator();
+        public List<KeyValuePair<TKey, TValue>>.Enumerator GetEnumerator() => list.GetEnumerator();
 
         /// <summary>
         /// Determines the index of a specific item in the <see cref="OrderedDictionary{TKey, TValue}"/>.
@@ -265,43 +273,47 @@ namespace Asjc.Collections.Extended
         /// <param name="key">The key of the value to get.</param>
         /// <param name="value">When this method returns, contains the value associated with the specified key, if the key is found; otherwise, the default value for the type of the <paramref name="key"/> parameter. This parameter is passed uninitialized.</param>
         /// <returns></returns>
-        public bool TryGetValue(TKey key, out TValue value) => dictionary.TryGetValue(key, out value);
+#if NETSTANDARD2_1 || NET8_0
+        public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
+#else
+        public bool TryGetValue(TKey key, out TValue value)
+#endif
+            => dictionary.TryGetValue(key, out value);
 
-        void IDictionary.Add(object key, object value) => Add((TKey)key, (TValue)value);
+        void IDictionary.Add(object key, object? value) => Add((TKey)key, (TValue)value!); // Safe?
 
-        int IList.Add(object value)
+        int IList.Add(object? value)
         {
-            Add((KeyValuePair<TKey, TValue>)value);
+            Add((KeyValuePair<TKey, TValue>)value!); // Safe?
             return Count - 1;
         }
 
-        bool IDictionary.Contains(object key) => key is TKey k && ContainsKey(k);
+        bool IDictionary.Contains(object key) => ((IDictionary)dictionary).Contains(key);
 
-        bool IList.Contains(object value) => value is KeyValuePair<TKey, TValue> i && Contains(i);
+        bool IList.Contains(object? value) => ((IList)list).Contains(value);
 
         void ICollection.CopyTo(Array array, int index) => ((ICollection)list).CopyTo(array, index);
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+        IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator() => GetEnumerator();
+
         IDictionaryEnumerator IDictionary.GetEnumerator() => dictionary.GetEnumerator();
 
-        int IList.IndexOf(object value)
-        {
-            if (value is KeyValuePair<TKey, TValue> i)
-                return IndexOf(i);
-            return -1;
-        }
+        int IList.IndexOf(object? value) => ((IList)list).IndexOf(value);
 
-        void IList.Insert(int index, object value) => Insert(index, (KeyValuePair<TKey, TValue>)value);
+        void IList.Insert(int index, object? value) => Insert(index, (KeyValuePair<TKey, TValue>)value!); // Safe?
 
         void IDictionary.Remove(object key)
         {
+            // Does nothing for incompatible keys.
             if (key is TKey i)
                 Remove(i);
         }
 
-        void IList.Remove(object value)
+        void IList.Remove(object? value)
         {
+            // Does nothing for incompatible keys.
             if (value is KeyValuePair<TKey, TValue> i)
                 Remove(i);
         }
@@ -312,7 +324,7 @@ namespace Asjc.Collections.Extended
         /// <remarks>
         /// Changes to the return value are not reflected in the original dictionary.
         /// </remarks>
-        public static implicit operator Dictionary<TKey, TValue>(OrderedDictionary<TKey, TValue> od) => new(od.dictionary);
+        public static explicit operator Dictionary<TKey, TValue>(OrderedDictionary<TKey, TValue> od) => new(od.dictionary);
 
         /// <summary>
         /// Converts the specified <see cref="OrderedDictionary{TKey, TValue}"/> to a <see cref="List{T}"/>.
@@ -320,6 +332,6 @@ namespace Asjc.Collections.Extended
         /// <remarks>
         /// Changes to the return value are not reflected in the original dictionary.
         /// </remarks>
-        public static implicit operator List<KeyValuePair<TKey, TValue>>(OrderedDictionary<TKey, TValue> od) => new(od.list);
+        public static explicit operator List<KeyValuePair<TKey, TValue>>(OrderedDictionary<TKey, TValue> od) => new(od.list);
     }
 }

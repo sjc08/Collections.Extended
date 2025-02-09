@@ -159,7 +159,7 @@ namespace Asjc.Collections.Extended.Tests
         {
             RunTest(od =>
             {
-                Dictionary<string, string> dictionary = od;
+                Dictionary<string, string> dictionary = (Dictionary<string, string>)od;
                 dictionary.Clear();
             });
         }
@@ -169,7 +169,7 @@ namespace Asjc.Collections.Extended.Tests
         {
             RunTest(od =>
             {
-                List<KeyValuePair<string, string>> list = od;
+                List<KeyValuePair<string, string>> list = (List<KeyValuePair<string, string>>)od;
                 list.Clear();
             });
         }

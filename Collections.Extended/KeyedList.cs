@@ -10,11 +10,13 @@ namespace Asjc.Collections.Extended
     {
         public KeyedList() : base() { }
 
+        public KeyedList(int capacity) : base(capacity) { }
+
         public KeyedList(IEnumerable<KeyValuePair<object, TValue>> pairs) : base(pairs) { }
 
-        public KeyedList(IEnumerable<TValue> values) : base(values) { }
-
         public KeyedList(Func<TValue, object> keySelector) : base(keySelector) { }
+
+        public KeyedList(Func<TValue, object> keySelector, int capacity) : base(keySelector, capacity) { }
 
         public KeyedList(Func<TValue, object> keySelector, IEnumerable<KeyValuePair<object, TValue>> pairs) : base(keySelector, pairs) { }
 
@@ -29,19 +31,22 @@ namespace Asjc.Collections.Extended
             KeySelector = _ => throw new NotSupportedException();
         }
 
+        public KeyedList(int capacity) : base(capacity)
+        {
+            KeySelector = _ => throw new NotSupportedException();
+        }
+
         public KeyedList(IEnumerable<KeyValuePair<TKey, TValue>> pairs) : base(pairs)
         {
             KeySelector = _ => throw new NotSupportedException();
         }
 
-        public KeyedList(IEnumerable<TValue> values)
+        public KeyedList(Func<TValue, TKey> keySelector)
         {
-            KeySelector = _ => throw new NotSupportedException();
-            foreach (var item in values)
-                Add(item);
+            KeySelector = keySelector;
         }
 
-        public KeyedList(Func<TValue, TKey> keySelector)
+        public KeyedList(Func<TValue, TKey> keySelector, int capacity) : base(capacity)
         {
             KeySelector = keySelector;
         }
@@ -61,11 +66,13 @@ namespace Asjc.Collections.Extended
         public new TValue this[int index]
         {
             get => base[index].Value;
-            set => base[index] = new KeyValuePair<TKey, TValue>(KeySelector(value), value);
+            set => base[index] = new(KeySelector(value), value);
         }
 
         /// <inheritdoc/>
         public Func<TValue, TKey> KeySelector { get; set; }
+
+        bool ICollection<TValue>.IsReadOnly => false;
 
         public void Add(TValue item) => Add(KeySelector(item), item);
 
@@ -73,7 +80,13 @@ namespace Asjc.Collections.Extended
 
         public void CopyTo(TValue[] array, int arrayIndex) => OrderedValues.CopyTo(array, arrayIndex);
 
-        public new IEnumerator<TValue> GetEnumerator() => OrderedValues.GetEnumerator();
+        /// <summary>
+        /// Returns an enumerator that iterates through the <see cref="KeyedList{TKey, TValue}"/>.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="List{T}.Enumerator"/> for the <see cref="KeyedList{TKey, TValue}"/>.
+        /// </returns>
+        public new List<TValue>.Enumerator GetEnumerator() => OrderedValues.GetEnumerator();
 
         public int IndexOf(TValue item) => OrderedValues.IndexOf(item);
 
@@ -90,13 +103,9 @@ namespace Asjc.Collections.Extended
             return false;
         }
 
-        /// <summary>
-        /// Returns an enumerator that iterates through the <see cref="KeyedList{TKey, TValue}"/>.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="List{T}.Enumerator"/> for the <see cref="KeyedList{TKey, TValue}"/>.
-        /// </returns>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        IEnumerator<TValue> IEnumerable<TValue>.GetEnumerator() => GetEnumerator();
 
         /// <summary>
         /// Converts the specified <see cref="KeyedList{TKey, TValue}"/> to a <see cref="List{T}"/>.
@@ -104,6 +113,6 @@ namespace Asjc.Collections.Extended
         /// <remarks>
         /// Changes to the return value are not reflected in the original dictionary.
         /// </remarks>
-        public static implicit operator List<TValue>(KeyedList<TKey, TValue> kl) => kl.OrderedValues;
+        public static explicit operator List<TValue>(KeyedList<TKey, TValue> kl) => kl.OrderedValues;
     }
 }
