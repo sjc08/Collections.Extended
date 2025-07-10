@@ -273,7 +273,7 @@ namespace Asjc.Collections.Extended
         /// <param name="key">The key of the value to get.</param>
         /// <param name="value">When this method returns, contains the value associated with the specified key, if the key is found; otherwise, the default value for the type of the <paramref name="key"/> parameter. This parameter is passed uninitialized.</param>
         /// <returns></returns>
-#if NETSTANDARD2_1 || NET8_0
+#if NET8_0
         public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
 #else
         public bool TryGetValue(TKey key, out TValue value)

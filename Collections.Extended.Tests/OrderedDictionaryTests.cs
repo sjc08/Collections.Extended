@@ -1,19 +1,12 @@
-﻿using Asjc.Extensions;
+﻿using Asjc.Utils.Extensions;
 
 namespace Asjc.Collections.Extended.Tests
 {
     [TestClass]
     public class OrderedDictionaryTests
     {
-        public static void RunTest(Action<OrderedDictionary<string, string>> action)
+        private static void CheckConsistency<TKey, TValue>(OrderedDictionary<TKey, TValue> od) where TKey : notnull
         {
-            OrderedDictionary<string, string> od = new()
-            {
-                { "A", "AAA" },
-                { "B", "BBB" },
-                { "C", "CCC" }
-            };
-            action(od);
             Assert.IsTrue(od.Keys.ContentEqual(od.OrderedKeys));
             Assert.IsTrue(od.Values.ContentEqual(od.OrderedValues));
             Assert.IsTrue(od.Count == od.Keys.Count && od.Count == od.Values.Count);
@@ -21,157 +14,160 @@ namespace Asjc.Collections.Extended.Tests
         }
 
         [TestMethod]
-        public void Indexer1() => RunTest(od => Assert.AreEqual(od["A"], "AAA"));
-
-        [TestMethod]
-        public void Indexer1_KeyNotContained()
+        public void Indexer1_ReturnsCorrectValue()
         {
-            RunTest(od =>
-            {
-                Assert.ThrowsException<KeyNotFoundException>(() => _ = od["D"]);
-                od["D"] = "DDD";
-                Assert.AreEqual(new("D", "DDD"), od[3]);
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.AreEqual("A", od["a"]);
+            CheckConsistency(od);
         }
 
         [TestMethod]
-        public void Indexer2() => RunTest(od => Assert.AreEqual(od[0], new("A", "AAA")));
-
-        [TestMethod]
-        public void Indexer2_KeyNotMatched()
+        public void Indexer1_KeyNotContained_ThrowsKeyNotFoundException()
         {
-            RunTest(od =>
-            {
-                od[0] = new("D", "DDD");
-                Assert.AreEqual(od[0], new("D", "DDD"));
-                Assert.AreEqual(od.Count, 3);
-                Assert.IsFalse(od.ContainsKey("A"));
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.ThrowsExactly<KeyNotFoundException>(() => _ = od["c"]);
+            CheckConsistency(od);
         }
 
         [TestMethod]
-        public void Indexer2_DuplicateKey()
+        public void Indexer1_KeyNotContained_AddsNewElement()
         {
-            RunTest(od =>
-            {
-                void a() => od[0] = new("B", "BBB");
-                Assert.ThrowsException<ArgumentException>(a);
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            od["c"] = "C";
+            Assert.AreEqual(new("c", "C"), od[2]);
+            CheckConsistency(od);
+        }
+
+        [TestMethod]
+        public void Indexer2_ReturnsCorrectPair()
+        {
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.AreEqual(od[0], new("a", "A"));
+            CheckConsistency(od);
+        }
+
+        [TestMethod]
+        public void Indexer2_KeyNotMatched_ReplacesOldElement()
+        {
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            od[0] = new("c", "C");
+            Assert.AreEqual(new("c", "C"), od[0]);
+            Assert.AreEqual(2, od.Count);
+            Assert.IsFalse(od.ContainsKey("a"));
+            CheckConsistency(od);
+        }
+
+        [TestMethod]
+        public void Indexer2_DuplicateKey_ThrowsArgumentException()
+        {
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.ThrowsExactly<ArgumentException>(() => od[0] = new("b", "B"));
+            CheckConsistency(od);
         }
 
         [TestMethod]
         public void Add1_DuplicateKey_ThrowsArgumentException()
         {
-            RunTest(od =>
-            {
-                void a() => od.Add("A", "ZZZ");
-                Assert.ThrowsException<ArgumentException>(a);
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.ThrowsExactly<ArgumentException>(() => od.Add(new("b", "B")));
+            CheckConsistency(od);
         }
 
         [TestMethod]
         public void Add2_DuplicateKey_ThrowsArgumentException()
         {
-            RunTest(od =>
-            {
-                void a() => od.Add(new("A", "ZZZ"));
-                Assert.ThrowsException<ArgumentException>(a);
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.ThrowsExactly<ArgumentException>(() => od.Add("b", "B"));
+            CheckConsistency(od);
         }
 
         [TestMethod]
-        public void Clear()
+        public void Clear_Emptiesictionary()
         {
-            RunTest(od =>
-            {
-                od.Clear();
-                Assert.AreEqual(0, od.Count);
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            od.Clear();
+            Assert.AreEqual(0, od.Count);
+            CheckConsistency(od);
         }
 
         [TestMethod]
         public void Insert_IndexLessThanZero_ThrowsArgumentOutOfRangeException()
         {
-            RunTest(od =>
-            {
-                void a() => od.Insert(-1, new("D", "ZZZ"));
-                Assert.ThrowsException<ArgumentOutOfRangeException>(a);
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => od.Insert(-1, new("c", "C")));
+            CheckConsistency(od);
         }
 
         [TestMethod]
         public void Insert_IndexGreaterThanCount_ThrowsArgumentOutOfRangeException()
         {
-            RunTest(od =>
-            {
-                void a() => od.Insert(od.Count + 1, new("D", "ZZZ"));
-                Assert.ThrowsException<ArgumentOutOfRangeException>(a);
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => od.Insert(od.Count + 1, new("c", "C")));
+            CheckConsistency(od);
         }
 
         [TestMethod]
-        public void Remove1()
+        public void Remove1_RemovesSuccessfully()
         {
-            RunTest(od =>
-            {
-                od.Remove("B");
-                Assert.IsFalse(od.ContainsKey("B"));
-                Assert.IsFalse(od.Values.Contains("BBB"));
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            od.Remove("b");
+            Assert.IsFalse(od.ContainsKey("b"));
+            Assert.IsFalse(od.Values.Contains("B"));
+            CheckConsistency(od);
         }
 
         [TestMethod]
-        public void Remove2()
+        public void Remove2_RemovesSuccessfully()
         {
-            RunTest(od =>
-            {
-                od.Remove(new KeyValuePair<string, string>("B", "BBB"));
-                Assert.IsFalse(od.ContainsKey("B"));
-                Assert.IsFalse(od.Values.Contains("BBB"));
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            od.Remove(new KeyValuePair<string, string>("b", "B"));
+            Assert.IsFalse(od.ContainsKey("b"));
+            Assert.IsFalse(od.Values.Contains("B"));
+            CheckConsistency(od);
         }
 
         [TestMethod]
-        public void RemoveAt() => RunTest(od => od.RemoveAt(0));
+        public void RemoveAt_RemovesSuccessfully()
+        {
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            od.RemoveAt(1);
+            Assert.IsFalse(od.ContainsKey("b"));
+            Assert.IsFalse(od.Values.Contains("B"));
+            CheckConsistency(od);
+        }
 
         [TestMethod]
         public void RemoveAt_IndexLessThanZero_ThrowsArgumentOutOfRangeException()
         {
-            RunTest(od =>
-            {
-                void a() => od.RemoveAt(-1);
-                Assert.ThrowsException<ArgumentOutOfRangeException>(a);
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => od.RemoveAt(-1));
+            CheckConsistency(od);
         }
 
         [TestMethod]
         public void RemoveAt_IndexGreaterThanCount_ThrowsArgumentOutOfRangeException()
         {
-            RunTest(od =>
-            {
-                void a() => od.RemoveAt(od.Count + 1);
-                Assert.ThrowsException<ArgumentOutOfRangeException>(a);
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => od.RemoveAt(od.Count + 1));
+            CheckConsistency(od);
         }
 
         [TestMethod]
         public void ConversionOperator1()
         {
-            RunTest(od =>
-            {
-                Dictionary<string, string> dictionary = (Dictionary<string, string>)od;
-                dictionary.Clear();
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            var dictionary = (Dictionary<string, string>)od;
+            dictionary.Clear();
+            CheckConsistency(od);
         }
 
         [TestMethod]
         public void ConversionOperator2()
         {
-            RunTest(od =>
-            {
-                List<KeyValuePair<string, string>> list = (List<KeyValuePair<string, string>>)od;
-                list.Clear();
-            });
+            OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
+            var list = (List<KeyValuePair<string, string>>)od;
+            list.Clear();
+            CheckConsistency(od);
         }
     }
 }
