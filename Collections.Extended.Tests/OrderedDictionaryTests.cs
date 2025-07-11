@@ -69,7 +69,8 @@ namespace Asjc.Collections.Extended.Tests
         public void Add1_DuplicateKey_ThrowsArgumentException()
         {
             OrderedDictionary<string, string> od = new() { { "a", "A" }, { "b", "B" } };
-            Assert.ThrowsExactly<ArgumentException>(() => od.Add(new("b", "B")));
+            Assert.ThrowsExactly<ArgumentException>(() => od.Add(new("b", "C")));
+            Assert.AreEqual(2, od.Count);
             CheckConsistency(od);
         }
 

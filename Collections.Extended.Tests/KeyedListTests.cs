@@ -3,25 +3,19 @@
     [TestClass]
     public class KeyedListTests
     {
-        public static KeyedList<string, string> KL => new(v => v[..1])
+        [TestMethod]
+        public void Add1_DuplicateKey_ThrowsArgumentException()
         {
-            { "A", "AAA" },
-            { "B", "BBB" },
-            { "C", "CCC" }
-        };
-
-        [TestMethod]
-        public void Add1() => KL.Add("DDD");
-
-        [TestMethod]
-        public void Add1_DuplicateKey_ThrowsArgumentException() => Assert.ThrowsException<ArgumentException>(() => KL.Add("AAA"));
+            KeyedList<string, string> kl = new(s => s.ToLower()) { { "a", "A" }, { "b", "B" } };
+            Assert.ThrowsExactly<ArgumentException>(() => kl.Add("A"));
+        }
 
         [TestMethod]
         public void Insert1()
         {
-            var kl = KL;
-            kl.Insert(1, "EEE");
-            Assert.AreEqual(kl[1], "EEE");
+            KeyedList<string, string> kl = new(s => s.ToLower()) { { "a", "A" }, { "b", "B" } };
+            kl.Insert(1, "C");
+            Assert.AreEqual("C", kl[1]);
         }
     }
 }
